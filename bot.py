@@ -1,13 +1,12 @@
-from telegram.ext import Updater, CommandHandler, InlineQueryHandler, ChosenInlineResultHandler
-from telegram import InlineQueryResultGif, InlineQueryResultMpeg4Gif, InlineKeyboardButton, InlineKeyboardMarkup, \
-    InputMediaAnimation, InputTextMessageContent
 import html
-import settings
 import logging
-import random
-from pprint import pformat
-import json
+
 import requests
+from telegram import InlineQueryResultMpeg4Gif, InlineKeyboardButton, InlineKeyboardMarkup, \
+    InputMediaAnimation
+from telegram.ext import Updater, CommandHandler, InlineQueryHandler, ChosenInlineResultHandler
+
+import settings
 
 LOGGER = logging.getLogger("Tenor")
 HELLO_TEXT = """
@@ -37,17 +36,22 @@ def create_generic_response(text):
 
 def search(bot, update):
     query = update.inline_query
-    req_args = {"q": query.query, "key": settings.TENOR_KEY, "limit": 50}
-    if query.offset != "":
-        req_args["pos"] = query.offset
-    r = requests.get("https://api.tenor.com/v1/search", params=req_args)
+    if query.query != "":
+        req_args = {"q": query.query, "key": settings.TENOR_KEY, "limit": 50}
+        if query.offset != "":
+            req_args["pos"] = query.offset
+        r = requests.get("https://api.tenor.com/v1/search", params=req_args)
+    else:
+        LOGGER.info("showing trending to %s", update.effective_user)
+        req_args = {"key": settings.TENOR_KEY, "limit": 50}
+        if query.offset != "":
+            req_args["pos"] = query.offset
+        r = requests.get("https://api.tenor.com/v1/trending", params=req_args)
     LOGGER.info(r.url)
     r = r.json()
     resp = []
     for gif in r["results"]:
         buttons = None
-        #buttons = InlineKeyboardMarkup([[InlineKeyboardButton("GIF on Tenor", url=gif["url"])], [
-        #        InlineKeyboardButton(f'More "{req_args["q"]}" GIFs', switch_inline_query_current_chat=req_args["q"])]])
         for mp4type in ["loopedmp4", "mp4", "tinymp4", "nanomp4"]:
             media = gif["media"][0][mp4type]
             LOGGER.debug("%s | %s", mp4type, media)
@@ -63,7 +67,8 @@ def search(bot, update):
                                                           ))
                     break
     LOGGER.info("Results length: %s, next_offset: %s", len(resp), r["next"])
-    query.answer(results=resp, next_offset=r["next"], switch_pm_text=settings.PM_TEXT, switch_pm_parameter=settings.PM_KEY, cache_time=0)
+    query.answer(results=resp, next_offset=r["next"], switch_pm_text=settings.PM_TEXT,
+                 switch_pm_parameter=settings.PM_KEY, cache_time=0)
 
 
 def update_gif(bot, update):
@@ -72,11 +77,6 @@ def update_gif(bot, update):
         LOGGER.debug("%s not loopedmp4 - fixing that!", gif_info)
         req_args = {"ids": gif_info[1], "key": settings.TENOR_KEY}
         r = requests.get("https://api.tenor.com/v1/gifs", params=req_args)
-        buttons = InlineKeyboardMarkup([[InlineKeyboardButton("GIF on Tenor",
-                                                              url=r.json()["results"][0]["url"])],
-                                        [InlineKeyboardButton(f'More "{update.chosen_inline_result.query}" GIFs',
-                                                              switch_inline_query_current_chat=update.chosen_inline_result.query)]
-                                        ])
         buttons = None
         media = r.json()["results"][0]["media"][0]["loopedmp4"]
         bot.editMessageMedia(inline_message_id=update.chosen_inline_result.inline_message_id,
@@ -87,6 +87,7 @@ def update_gif(bot, update):
                              reply_markup=buttons,
                              )
 
+
 def start(bot, update):
     if settings.PM_KEY is not None:
         update.message.reply_text("Warning: this bot is moved to @tenorbot and @thetenorbot will be shut down soon!")
@@ -96,12 +97,14 @@ def start(bot, update):
             "me_username": "@" + bot.getMe().username}
         update.message.reply_text(HELLO_TEXT % userdata, parse_mode="HTML")
 
+
 updater = Updater(settings.TOKEN, **settings.UPDATER_KWARGS)
 
 updater.dispatcher.add_handler(CommandHandler(
     'start', start))
 updater.dispatcher.add_handler(InlineQueryHandler(search))
 updater.dispatcher.add_handler(ChosenInlineResultHandler(update_gif))
-updater.start_polling(clean=True)
-LOGGER.info("Started polling - idling")
-updater.idle()
+if __name__ == '__main__':
+    updater.start_polling(clean=True)
+    LOGGER.info("Started polling - idling")
+    updater.idle()
