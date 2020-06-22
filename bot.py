@@ -51,10 +51,13 @@ def search(bot, update):
     r = r.json()
     resp = []
     for gif in r["results"]:
-        buttons = None
         for mp4type in ["loopedmp4", "mp4", "tinymp4", "nanomp4"]:
             media = gif["media"][0][mp4type]
-            LOGGER.debug("%s | %s", mp4type, media)
+            # LOGGER.debug("%s | %s", mp4type, media)
+            if mp4type != "loopedmp4":
+                buttons = InlineKeyboardMarkup([[InlineKeyboardButton(url="https://www.youtube.com/watch?v=dQw4w9WgXcQ", text="Loading Hi-Res")]])
+            else:
+                buttons = None
             if "size" in media:
                 if media["size"] < 1000000:
                     resp.append(InlineQueryResultMpeg4Gif(id=f'{mp4type}-{gif["id"]}',
@@ -84,7 +87,7 @@ def update_gif(bot, update):
                                                        width=int(media["dims"][0]),
                                                        height=int(media["dims"][1]),
                                                        duration=int(media["duration"])),
-                             reply_markup=buttons,
+                             reply_markup=buttons
                              )
     else:
         LOGGER.debug("%s is loopedmp4 already", gif_info)
