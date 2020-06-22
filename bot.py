@@ -86,6 +86,8 @@ def update_gif(bot, update):
                                                        duration=int(media["duration"])),
                              reply_markup=buttons,
                              )
+    else:
+        LOGGER.debug("%s is loopedmp4 already", gif_info)
 
 
 def start(bot, update):
