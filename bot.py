@@ -25,16 +25,16 @@ PLEASE_WAIT = InlineKeyboardMarkup(
 
 
 def create_generic_response(text):
-    def reply(bot, update):
+    def reply(update, context):
         userdata = {"name": html.escape(
             update.message.from_user.first_name), "username": update.message.from_user.username,
-            "me_username": "@" + bot.getMe().username}
+            "me_username": "@" + updater.bot.getMe().username}
         update.message.reply_text(text % userdata, parse_mode="HTML")
 
     return reply
 
 
-def search(bot, update):
+def search(update, context):
     query = update.inline_query
     if query.query != "":
         req_args = {"q": query.query, "key": settings.TENOR_KEY, "limit": 50}
@@ -74,7 +74,7 @@ def search(bot, update):
                  switch_pm_parameter=settings.PM_KEY, cache_time=0)
 
 
-def update_gif(bot, update):
+def update_gif(update, context):
     gif_info = update.chosen_inline_result.result_id.split("-")
     if not gif_info[0] == PREFERRED_QUALITY:
         LOGGER.debug("%s not %s - fixing that!", gif_info, PREFERRED_QUALITY)
@@ -82,7 +82,7 @@ def update_gif(bot, update):
         r = requests.get("https://api.tenor.com/v1/gifs", params=req_args)
         buttons = None
         media = r.json()["results"][0]["media"][0][PREFERRED_QUALITY]
-        bot.editMessageMedia(inline_message_id=update.chosen_inline_result.inline_message_id,
+        update.effective_message.editMessageMedia(inline_message_id=update.chosen_inline_result.inline_message_id,
                              media=InputMediaAnimation(media=media["url"],
                                                        width=int(media["dims"][0]),
                                                        height=int(media["dims"][1]),
@@ -93,13 +93,13 @@ def update_gif(bot, update):
         LOGGER.debug("%s is %s already", gif_info, PREFERRED_QUALITY)
 
 
-def start(bot, update):
+def start(update, context):
     if settings.PM_KEY is not None:
         update.message.reply_text("Warning: this bot is moved to @tenorbot and @thetenorbot will be shut down soon!")
     if settings.PM_KEY is None or (settings.PM_KEY is not None and not update.message.text.endswith(settings.PM_KEY)):
         userdata = {"name": html.escape(
             update.message.from_user.first_name), "username": update.message.from_user.username,
-            "me_username": "@" + bot.getMe().username}
+            "me_username": "@" + updater.bot.getMe().username}
         update.message.reply_text(HELLO_TEXT % userdata, parse_mode="HTML")
 
 
