@@ -7,7 +7,7 @@ from telegram import InlineQueryResultMpeg4Gif, InlineKeyboardButton, InlineKeyb
 from telegram.ext import Updater, CommandHandler, InlineQueryHandler, ChosenInlineResultHandler
 
 import settings
-
+PREFERRED_QUALITY="mp4"
 LOGGER = logging.getLogger("Tenor")
 HELLO_TEXT = """
 Hi, %(name)s!
@@ -51,10 +51,10 @@ def search(bot, update):
     r = r.json()
     resp = []
     for gif in r["results"]:
-        for mp4type in ["loopedmp4", "mp4", "tinymp4", "nanomp4"]:
+        for mp4type in [PREFERRED_QUALITY, "mp4", "tinymp4", "nanomp4"]:
             media = gif["media"][0][mp4type]
             # LOGGER.debug("%s | %s", mp4type, media)
-            if mp4type != "loopedmp4":
+            if mp4type != PREFERRED_QUALITY:
                 buttons = InlineKeyboardMarkup([[InlineKeyboardButton(url="https://www.youtube.com/watch?v=dQw4w9WgXcQ", text="Loading Hi-Res")]])
             else:
                 buttons = None
@@ -76,12 +76,12 @@ def search(bot, update):
 
 def update_gif(bot, update):
     gif_info = update.chosen_inline_result.result_id.split("-")
-    if not gif_info[0] == 'loopedmp4':
-        LOGGER.debug("%s not loopedmp4 - fixing that!", gif_info)
+    if not gif_info[0] == PREFERRED_QUALITY:
+        LOGGER.debug("%s not %s - fixing that!", gif_info, PREFERRED_QUALITY)
         req_args = {"ids": gif_info[1], "key": settings.TENOR_KEY}
         r = requests.get("https://api.tenor.com/v1/gifs", params=req_args)
         buttons = None
-        media = r.json()["results"][0]["media"][0]["loopedmp4"]
+        media = r.json()["results"][0]["media"][0][PREFERRED_QUALITY]
         bot.editMessageMedia(inline_message_id=update.chosen_inline_result.inline_message_id,
                              media=InputMediaAnimation(media=media["url"],
                                                        width=int(media["dims"][0]),
@@ -90,7 +90,7 @@ def update_gif(bot, update):
                              reply_markup=buttons
                              )
     else:
-        LOGGER.debug("%s is loopedmp4 already", gif_info)
+        LOGGER.debug("%s is %s already", gif_info, PREFERRED_QUALITY)
 
 
 def start(bot, update):
