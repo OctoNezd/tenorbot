@@ -82,7 +82,7 @@ def update_gif(update, context):
         r = requests.get("https://api.tenor.com/v1/gifs", params=req_args)
         buttons = None
         media = r.json()["results"][0]["media"][0][PREFERRED_QUALITY]
-        update.effective_message.editMessageMedia(inline_message_id=update.chosen_inline_result.inline_message_id,
+        context.bot.editMessageMedia(inline_message_id=update.chosen_inline_result.inline_message_id,
                              media=InputMediaAnimation(media=media["url"],
                                                        width=int(media["dims"][0]),
                                                        height=int(media["dims"][1]),
