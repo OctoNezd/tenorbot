@@ -1,0 +1,6 @@
+services:
+    tenorbot:
+        restart: always
+        build:
+            context: .
+        env_file: .env
